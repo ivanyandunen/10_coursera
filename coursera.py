@@ -4,27 +4,24 @@ import random
 from bs4 import BeautifulSoup
 import openpyxl
 import os
+import argparse
 
 
-def get_courses_list():
-    courses_list = requests.get(
-        'https://www.coursera.org/sitemap~www~courses.xml'
-    )
+def get_random_courses_urls(site_content):
     number_of_links = 20
 
-    xml_tree = etree.fromstring(courses_list.content)
+    xml_tree = etree.fromstring(site_content.content)
     courses_urls = [child[0].text for child in xml_tree]
     return random.sample(courses_urls, number_of_links)
 
 
-def get_course_info(url):
-    course_html = requests.get(url)
+def get_course_info(url, course_html):
     soup = BeautifulSoup(course_html.content, 'html.parser')
     rating_exists = soup.find('div', class_='ratings-text bt3-visible-xs')
     if rating_exists:
         rating = rating_exists.text
     else:
-        rating = 'No rating yet'
+        rating = rating_exists
     course_info = {
         'Title': soup.h2.text,
         'Language': soup.find('div', class_='rc-Language').text,
@@ -36,9 +33,9 @@ def get_course_info(url):
     return course_info
 
 
-def output_courses_info_to_xlsx(courses_info):
-    if os.path.exists('courses_info.xlsx'):
-        wb = openpyxl.load_workbook('courses_info.xlsx')
+def output_courses_info_to_xlsx(path_to_file, courses_info):
+    if os.path.exists(path_to_file):
+        wb = openpyxl.load_workbook(path_to_file)
     else:
         wb = openpyxl.Workbook()
     ws = wb.active
@@ -52,19 +49,48 @@ def output_courses_info_to_xlsx(courses_info):
     ])
     for course in courses_info:
         ws.append([
-            course.get('Title'),
-            course.get('Language'),
-            course.get('Start date'),
-            course.get('Duration(weeks)'),
-            course.get('Rating'),
-            course.get('Course_url')
+            course['Title'],
+            course['Language'],
+            course['Start date'],
+            course['Duration(weeks)'],
+            course['Rating'],
+            course['Course_url']
         ])
-    wb.save('courses_info.xlsx')
+    return wb
+
+
+def get_parser_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o', '--outfile',
+        help='Path to xlsx file with information about courses. '
+             'Without it file will be saved to current directory'
+             ' as courses_info.xlsx',
+    )
+    return parser.parse_args()
+
+
+def get_path_to_save_file(outfile):
+    if outfile and os.path.isdir(outfile):
+        print('The path you specified is a directory. '
+              'File will be saved in current location')
+        return 'courses_info.xlsx'
+    elif outfile:
+        return outfile
+    else:
+        return 'courses_list.xlsx'
 
 
 if __name__ == '__main__':
+    args = get_parser_args()
+    site_content = requests.get(
+        'https://www.coursera.org/sitemap~www~courses.xml'
+    )
     courses_info = []
-    list_of_courses = get_courses_list()
-    for course in list_of_courses:
-        courses_info.append(get_course_info(course))
-    output_courses_info_to_xlsx(courses_info)
+    path_to_file = get_path_to_save_file(args.outfile)
+    courses_urls = get_random_courses_urls(site_content)
+    for course_url in courses_urls:
+        course_html = requests.get(course_url)
+        courses_info.append(get_course_info(course_url, course_html))
+    courses_workbook = output_courses_info_to_xlsx(path_to_file, courses_info)
+    courses_workbook.save(path_to_file)

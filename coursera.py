@@ -35,7 +35,7 @@ def get_course_info(url, course_html):
 
 def output_courses_info_to_xlsx(path_to_file, courses_info):
     if os.path.exists(path_to_file):
-        wb = openpyxl.load_workbook(path_to_file)
+        return None
     else:
         wb = openpyxl.Workbook()
     ws = wb.active
@@ -66,19 +66,19 @@ def get_parser_args():
         help='Path to xlsx file with information about courses. '
              'Without it file will be saved to current directory'
              ' as courses_info.xlsx',
+        default='courses_list.xlsx'
     )
     return parser.parse_args()
 
 
 def get_path_to_save_file(outfile):
+    default = 'courses_list.xlsx'
     if outfile and os.path.isdir(outfile):
         print('The path you specified is a directory. '
               'File will be saved in current location')
-        return 'courses_info.xlsx'
+        return default
     elif outfile:
         return outfile
-    else:
-        return 'courses_list.xlsx'
 
 
 if __name__ == '__main__':
@@ -88,9 +88,14 @@ if __name__ == '__main__':
     )
     courses_info = []
     path_to_file = get_path_to_save_file(args.outfile)
+    print(path_to_file)
     courses_urls = get_random_courses_urls(site_content)
     for course_url in courses_urls:
         course_html = requests.get(course_url)
         courses_info.append(get_course_info(course_url, course_html))
     courses_workbook = output_courses_info_to_xlsx(path_to_file, courses_info)
-    courses_workbook.save(path_to_file)
+    if not courses_workbook:
+        print('File exists. Please enter a new one')
+    else:
+        courses_workbook.save(path_to_file)
+

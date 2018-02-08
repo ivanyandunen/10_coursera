@@ -33,11 +33,8 @@ def get_course_info(url, course_html):
     return course_info
 
 
-def output_courses_info_to_xlsx(path_to_file, courses_info):
-    if os.path.exists(path_to_file):
-        return None
-    else:
-        wb = openpyxl.Workbook()
+def output_courses_info_to_xlsx(courses_info):
+    wb = openpyxl.Workbook()
     ws = wb.active
     ws.append([
         'Title',
@@ -89,7 +86,6 @@ if __name__ == '__main__':
             course_html = requests.get(course_url)
             courses_info.append(get_course_info(course_url, course_html))
         courses_workbook = output_courses_info_to_xlsx(
-            args.outfile,
             courses_info
         )
         courses_workbook.save(args.outfile)

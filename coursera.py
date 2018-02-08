@@ -71,31 +71,25 @@ def get_parser_args():
     return parser.parse_args()
 
 
-def get_path_to_save_file(outfile):
-    default = 'courses_list.xlsx'
-    if outfile and os.path.isdir(outfile):
-        print('The path you specified is a directory. '
-              'File will be saved in current location')
-        return default
-    elif outfile:
-        return outfile
-
-
 if __name__ == '__main__':
     args = get_parser_args()
-    site_content = requests.get(
-        'https://www.coursera.org/sitemap~www~courses.xml'
-    )
-    courses_info = []
-    path_to_file = get_path_to_save_file(args.outfile)
-    print(path_to_file)
-    courses_urls = get_random_courses_urls(site_content)
-    for course_url in courses_urls:
-        course_html = requests.get(course_url)
-        courses_info.append(get_course_info(course_url, course_html))
-    courses_workbook = output_courses_info_to_xlsx(path_to_file, courses_info)
-    if not courses_workbook:
-        print('File exists. Please enter a new one')
+    if os.path.exists(args.outfile):
+        print(
+            'File or directory {} exists. Please enter a new one'.format(
+                args.outfile
+            )
+        )
     else:
-        courses_workbook.save(path_to_file)
-
+        site_content = requests.get(
+            'https://www.coursera.org/sitemap~www~courses.xml'
+        )
+        courses_info = []
+        courses_urls = get_random_courses_urls(site_content)
+        for course_url in courses_urls:
+            course_html = requests.get(course_url)
+            courses_info.append(get_course_info(course_url, course_html))
+        courses_workbook = output_courses_info_to_xlsx(
+            args.outfile,
+            courses_info
+        )
+        courses_workbook.save(args.outfile)
